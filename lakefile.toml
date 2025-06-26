@@ -1,0 +1,10 @@
+name = "functional-pearls-in-lean"
+version = "0.1.0"
+defaultTargets = ["functional-pearls-in-lean"]
+
+[[lean_lib]]
+name = "FunctionalPearlsInLean"
+
+[[lean_exe]]
+name = "functional-pearls-in-lean"
+root = "Main"
