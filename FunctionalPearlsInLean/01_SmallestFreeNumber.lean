@@ -24,7 +24,7 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
 import Mathlib.Data.Finset.Max
 
-def minfree (xs : Finset ℕ) : ℕ :=
+def minfree_naive (xs : Finset ℕ) : ℕ :=
   let interval := Finset.range (xs.card + 1)
   let diff := interval \ xs
   have : 1 ≤ diff.card := calc
@@ -36,5 +36,27 @@ def minfree (xs : Finset ℕ) : ℕ :=
   diff.min' this
 
 -- Array based solution
+/-
+Haskell:
+  minfree :: [Nat] → Nat
+  minfree = search · checklist
+
+  search :: Array Int Bool → Int
+  search = length · takeWhile id · elems
+
+  checklist :: [Int] → Array Int Bool
+  checklist xs = accumArray (∨) False (0, n)
+    (zip (filter (≤ n) xs) (repeat True ))
+      where n = length xs
+-/
+def search (xs : Array Bool) : ℕ :=
+  xs.takeWhile id |>.size
+
+def checklist (xs : Finset ℕ) : Array Bool :=
+  -- TODO: this construction is probably quadratic, not linear!
+  Array.ofFn (n := xs.card) (fun n => n ∈ xs)
+
+def minfree_array : Finset ℕ → ℕ :=
+  search ∘ checklist
 
 -- Divide and conquer solution
