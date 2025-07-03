@@ -1,12 +1,22 @@
 /-
 Problem:
-Compute the smallest natural number not in a given finite set X
-of natural numbers.
+Compute the smallest natural number not in a given finite set X of natural numbers.
 
 Note:
 The third solution uses the fact that any number occurs at most once.
-To compare all algorithms, this will be assumed for all of them.
 -/
+import Mathlib.Data.List.Nodup
+import Mathlib.Data.List.Basic
+import Mathlib.Tactic.Linarith
+
+def isMinFree (x : ℕ) (xs : List ℕ) : Prop :=
+  (x ∉ xs) ∧ ∀ y, y ∉ xs → x ≤ y
+
+theorem eq_of_isMinFree {x y : ℕ} {xs : List ℕ} (h₁ : isMinFree x xs) (h₂ : isMinFree y xs) :
+    x = y := by
+  have : x ≤ y := h₁.right y h₂.left
+  have : y ≤ x := h₂.right x h₁.left
+  linarith
 
 -- Naive solution
 /-
@@ -20,11 +30,6 @@ so termination is not even guaranteed.
 
 The code below follows the original one in spirit.
 -/
-import Mathlib.Data.Finset.Basic
-import Mathlib.Data.Finset.Card
-import Mathlib.Data.Finset.Max
-import Mathlib.Tactic.Linarith
-
 theorem subset_length_le_of_nodup [BEq α] [LawfulBEq α] (xs ys : List α) (subset : xs ⊆ ys) (nodup : xs.Nodup) :
     xs.length ≤ ys.length := by
   match xs with
@@ -48,16 +53,23 @@ theorem subset_length_le_of_nodup [BEq α] [LawfulBEq α] (xs ys : List α) (sub
     linarith
 
 def minfree_naive (xs : List ℕ) : ℕ :=
-  let interval := List.range (xs.length +1)
-  let diff := interval.filter (· ∉ xs)
-  have nonempty : diff ≠ [] := by
-    simp [diff]
+  let range := List.range (xs.length +1)
+  let frees := range.filter (· ∉ xs)
+  have nonempty : frees ≠ [] := by
+    simp [frees]
     by_contra h
     push_neg at h
-    have : interval.length = xs.length + 1 := List.length_range
-    have : interval.length ≤ xs.length := subset_length_le_of_nodup interval xs h List.nodup_range
+    have : range.length = xs.length + 1 := List.length_range
+    have : range.length ≤ xs.length := subset_length_le_of_nodup range xs h List.nodup_range
     linarith
-  diff.head nonempty
+  frees.head nonempty
+
+theorem minfree_naive_isMinFree (xs : List ℕ) : isMinFree (minfree_naive xs) xs := by
+  rw [minfree_naive]
+  constructor
+  · sorry
+  · intro y y_notin_xs
+    sorry
 
 -- def minfree_naive' (xs : Array ℕ) : ℕ :=
 --   let interval := Array.range (xs.size +1)
@@ -123,6 +135,15 @@ def checklist (xs : List ℕ) : Array Bool :=
 def minfree_array : List ℕ → ℕ :=
   search ∘ checklist
 
+theorem minfree_array_isMinFree (xs : List ℕ) : isMinFree (minfree_array xs) xs := by
+  sorry
+
+theorem minfree_array_is_minfree_naive : minfree_array = minfree_naive := by
+  ext xs
+  apply eq_of_isMinFree
+  · exact minfree_array_isMinFree xs
+  · exact minfree_naive_isMinFree xs
+
 -- Divide and conquer solution
 /-
 Properties (for lists):
@@ -168,28 +189,43 @@ Haskell:
             b        = a + 1 + n div 2
             m        = length us
 -/
--- def minfrom (a : ℕ) (xs : Array ℕ) (bound : ∀ x ∈ xs, a ≤ x) (nodup : ) : ℕ :=
---   if xs.isEmpty then
---     a
---   else
---     let b := a + 1 + xs.size / 2
---     let (us, vs) := xs.partition (· < b)
---     if us.size = b - a then
---       minfrom b vs sorry
---     else
---       minfrom a us sorry
---   termination_by xs.size
---   decreasing_by
---     show vs.size < xs.size
---     have h : us.size + vs.size = xs.size := by
---       sorry
---     have : us.size > 0 := sorry
---     linarith
---     show us.size < xs.size
---     have h : us.size < b - a := by
---       sorry
+def List.boundedBy (xs : List ℕ) (bound : ℕ) : Prop :=
+  xs.all (· ≥ bound)
 
---     sorry
+def minfrom (a : ℕ) (xs : List ℕ) (bounded : xs.boundedBy a) (nodup : xs.Nodup) : ℕ :=
+  if xs.isEmpty then
+    a
+  else
+    let b := a + 1 + xs.length / 2
+    let (us, vs) := xs.partition (· < b)
+    have us_bounded : us.all (· < b) := by sorry
+    have vs_bounded : vs.all (· ≥ b) := by sorry
+    have us_bounded : us.boundedBy a := by sorry
+    have vs_bounded : vs.boundedBy b := by sorry
+    have us_nodup : us.Nodup := by sorry
+    have vs_nodup : vs.Nodup := by sorry
+    if _h : us.length = b - a then
+      have : b > a := by sorry
+      have : 0 < us.length := by sorry
+      have : us.length + vs.length = xs.length := by sorry
+      have : vs.length < xs.length := by calc
+        vs.length = xs.length - us.length := Nat.eq_sub_of_add_eq' this
+        _         < xs.length := by sorry
+      minfrom b vs vs_bounded vs_nodup
+    else
+      have : us.length < xs.length := by calc
+        us.length < b - a     := by sorry
+        _         ≤ xs.length := by sorry
+      minfrom a us us_bounded us_nodup
+    termination_by xs.length
 
--- def minfree_DAC (xs : Array ℕ) : ℕ :=
---   minfrom 0 xs
+def minfree_DAC (xs : List ℕ) (nodup : xs.Nodup) : ℕ :=
+  minfrom 0 xs (by simp [List.boundedBy]) nodup
+
+theorem minfree_DAC_isMinFree (xs : List ℕ) (nodup : xs.Nodup) : isMinFree (minfree_DAC xs nodup) xs := by
+  sorry
+
+theorem minfree_DAC_is_minfree_naive (xs : List ℕ) (nodup : xs.Nodup) : minfree_DAC xs nodup = minfree_naive xs := by
+  apply eq_of_isMinFree
+  · exact minfree_DAC_isMinFree xs nodup
+  · exact minfree_naive_isMinFree xs
