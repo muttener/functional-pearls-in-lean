@@ -104,23 +104,21 @@ Haskell:
     (zip (filter (≤ n) xs) (repeat True ))
       where n = length xs
 -/
-def search (xs : List Bool) : ℕ :=
-  xs.takeWhile id |>.length
+def search (xs : Array Bool) : ℕ :=
+  xs.takeWhile id |>.size
 
-def accumList (accum : β → α → β) (init : β) (size : ℕ) (xs : List (ℕ × α)) : List β :=
-  -- TODO: check if using arrays instead of lists actually boosts performance.
+def accumArray (accum : β → α → β) (init : β) (size : ℕ) (xs : List (ℕ × α)) : Array β :=
   xs.foldl (fun arr (i,a) =>
     if _h : i < arr.size then
       arr.set i (accum arr[i] a)
     else
       arr)
   (Array.replicate size init)
-  |>.toList
 
-def checklist (xs : List ℕ) : List Bool :=
+def checklist (xs : List ℕ) : Array Bool :=
   let n := xs.length
   let pairs := xs.filter (· ≤ n) |>.zip (.replicate n true)
-  accumList .or false n pairs
+  accumArray .or false n pairs
 
 def minfree_array : List ℕ → ℕ :=
   search ∘ checklist
