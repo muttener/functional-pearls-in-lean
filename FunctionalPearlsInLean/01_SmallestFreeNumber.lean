@@ -65,11 +65,11 @@ def minfree_naive (xs : List ℕ) : ℕ :=
   frees.head nonempty
 
 theorem minfree_naive_isMinFree (xs : List ℕ) : isMinFree (minfree_naive xs) xs := by
-  rw [minfree_naive]
-  constructor
-  · sorry
-  · intro y y_notin_xs
-    sorry
+  simp [isMinFree, minfree_naive]
+  generalize_proofs h₁
+  obtain ⟨x, hx⟩ := Option.isSome_iff_exists.mp h₁
+  simp [hx]; simp at hx; obtain ⟨h₁, h₂, h₃⟩ := hx
+  use h₁; intro y hy; contrapose! hy; exact h₃ _ hy
 
 -- def minfree_naive' (xs : Array ℕ) : ℕ :=
 --   let interval := Array.range (xs.size +1)
